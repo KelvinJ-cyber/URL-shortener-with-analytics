@@ -6,9 +6,11 @@ import com.project.urlshortner.entities.Urls;
 import com.project.urlshortner.repository.UrlRepository;
 import com.project.urlshortner.util.Base62Encoder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor  // Lombok annotation to generate a constructor with required arguments (final fields)
@@ -16,6 +18,7 @@ public class UrlService {
 
     private final UrlRepository urlRepository;
     private final Base62Encoder base62Encoder;
+    private final RedisTemplate<String, String> redisTemplate;
 
     public ShortenResponse shortenUrl( ShortenRequest shortenRequest) {
 
@@ -33,8 +36,21 @@ public class UrlService {
 
         return ShortenResponse.builder()
                 .shortCode(shortCode)
-                .shortUrl("http://localhost:8080/" + shortCode)
+                .shortUrl("http://localhost:8080/api/" + shortCode)
                 .originalUrl(shortenRequest.getOriginalUrl())
                 .build();
+    }
+
+    public String getOriginalUrl(String shortCode) {
+        String cachedUrl = redisTemplate.opsForValue().get(shortCode); // Check Redis cache first, return if found
+        if (cachedUrl != null) {
+            return cachedUrl;
+        }
+
+        Urls url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new RuntimeException("Short code not found: " + shortCode));
+        redisTemplate.opsForValue().set(shortCode, url.getOriginalUrl(), 24, TimeUnit.HOURS);
+
+        return url.getOriginalUrl();
     }
 }
