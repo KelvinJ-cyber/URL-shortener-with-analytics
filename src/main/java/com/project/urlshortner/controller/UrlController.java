@@ -3,6 +3,7 @@ package com.project.urlshortner.controller;
 import com.project.urlshortner.dto.ShortenRequest;
 import com.project.urlshortner.dto.ShortenResponse;
 import com.project.urlshortner.service.UrlService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,8 +25,14 @@ public class UrlController {
     }
 
     @GetMapping("/{shortCode}")
-    public void redirect(@PathVariable String shortCode, HttpServletResponse response) throws IOException {
-        String originalUrl = urlService.getOriginalUrl(shortCode);
+    public void redirect(@PathVariable String shortCode, HttpServletResponse response,
+                         HttpServletRequest request) throws IOException {
+
+        String ipAddress = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        String referrer = request.getHeader("Referer");
+
+        String originalUrl = urlService.getOriginalUrl(shortCode, ipAddress, userAgent, referrer);
         response.sendRedirect(originalUrl);
     }
 

@@ -34,4 +34,7 @@ public class ClickEvent {
 
     @Column(name = "clicked_at")
     private LocalDateTime clickedAt;
+
+    @Column(name = "referrer", length = 500)
+    private String referrer;
 }

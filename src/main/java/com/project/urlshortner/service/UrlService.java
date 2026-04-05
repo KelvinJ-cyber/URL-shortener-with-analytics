@@ -19,6 +19,7 @@ public class UrlService {
     private final UrlRepository urlRepository;
     private final Base62Encoder base62Encoder;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ClickEventService clickEventService;
 
     public ShortenResponse shortenUrl( ShortenRequest shortenRequest) {
 
@@ -41,9 +42,12 @@ public class UrlService {
                 .build();
     }
 
-    public String getOriginalUrl(String shortCode) {
+    public String getOriginalUrl(String shortCode, String ipAddress,
+                                 String userAgent, String referrer)
+    {
         String cachedUrl = redisTemplate.opsForValue().get(shortCode); // Check Redis cache first, return if found
         if (cachedUrl != null) {
+            clickEventService.logClick(shortCode, ipAddress, userAgent, referrer);
             return cachedUrl;
         }
 
@@ -51,6 +55,7 @@ public class UrlService {
                 .orElseThrow(() -> new RuntimeException("Short code not found: " + shortCode));
         redisTemplate.opsForValue().set(shortCode, url.getOriginalUrl(), 24, TimeUnit.HOURS);
 
+        clickEventService.logClick(shortCode, ipAddress, userAgent, referrer);
         return url.getOriginalUrl();
     }
 }
